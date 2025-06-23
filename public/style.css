@@ -1,0 +1,15 @@
+body {
+  font-family: Arial;
+  background: #f4f4f4;
+  padding: 20px;
+}
+#chat-container {
+  max-width: 600px;
+  margin: auto;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+}
+#messages div {
+  margin-bottom: 10px;
+}
