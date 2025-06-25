@@ -1,38 +1,47 @@
 const socket = io();
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const messages = document.getElementById('messages');
-const fileForm = document.getElementById('fileForm');
-const fileInput = document.getElementById('fileInput');
+const videoGrid = document.getElementById('videos');
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
 
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  if (input.value) {
-    socket.emit('chat message', input.value);
-    input.value = '';
+const myPeer = new Peer(undefined, {
+  host: '/',
+  port: location.protocol === 'https:' ? 443 : 3000,
+  path: '/peerjs',
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' }
+    ]
   }
 });
 
-socket.on('chat message', msg => {
-  const item = document.createElement('div');
-  item.textContent = msg;
-  messages.appendChild(item);
+let myStream;
+
+navigator.mediaDevices.getUserMedia({
+  video: true,
+  audio: true
+}).then(stream => {
+  myStream = stream;
+  localVideo.srcObject = stream;
+  localVideo.play();
+
+  myPeer.on('call', call => {
+    call.answer(stream);
+    call.on('stream', userVideoStream => {
+      remoteVideo.srcObject = userVideoStream;
+      remoteVideo.play();
+    });
+  });
+
+  socket.on('user-connected', userId => {
+    const call = myPeer.call(userId, stream);
+    call.on('stream', userVideoStream => {
+      remoteVideo.srcObject = userVideoStream;
+      remoteVideo.play();
+    });
+  });
 });
 
-fileForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch('/upload', { method: 'POST', body: formData });
-  const data = await res.json();
-});
-
-socket.on('file', ({ fileUrl, fileName }) => {
-  const item = document.createElement('div');
-  item.innerHTML = `📁 <a href="${fileUrl}" target="_blank">${fileName}</a>`;
-  messages.appendChild(item);
+myPeer.on('open', id => {
+  const roomId = window.location.pathname.split('/')[2];
+  socket.emit('join-room', roomId, id);
 });

@@ -3,134 +3,21 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Appel Vidéo</title>
   <style>
-    body { font-family: Arial; text-align: center; margin: 20px; }
-    video { width: 45%; margin: 10px; background: #000; }
-    #incomingCall { display: none; padding: 10px; background: #eee; margin: 15px auto; border: 1px solid #ccc; width: 300px; }
-    #startCall { margin-top: 10px; }
+    body { margin: 0; background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+    video { width: 45%; margin: 10px; border-radius: 10px; }
+    #videos { display: flex; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
 <body>
-  <h1>Appel Vidéo WebRTC</h1>
-  <div>
-    <input type="text" id="roomInput" placeholder="Nom de la salle" />
-    <button id="startCall">📞 Démarrer l'appel</button>
+  <h2>Appel Vidéo en direct</h2>
+  <div id="videos">
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
   </div>
-
-  <div id="incomingCall">
-    <p>📲 Appel entrant...</p>
-    <button id="acceptCall">✅ Accepter</button>
-    <button id="declineCall">❌ Refuser</button>
-  </div>
-
-  <div>
-    <video id="localVideo" autoplay playsinline muted></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-  </div>
-
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    let localStream, remoteStream, peer;
-    let currentRoom = "";
-    let fromSocket = "";
-
-    const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
-    const startBtn = document.getElementById("startCall");
-    const roomInput = document.getElementById("roomInput");
-    const incomingCall = document.getElementById("incomingCall");
-    const acceptBtn = document.getElementById("acceptCall");
-    const declineBtn = document.getElementById("declineCall");
-
-    startBtn.onclick = async () => {
-      currentRoom = roomInput.value.trim();
-      if (!currentRoom) return alert("Entrez un nom de salle");
-      await getMedia();
-      socket.emit("demarrer-appel", currentRoom);
-    };
-
-    socket.on("appel-recu", async (from) => {
-      fromSocket = from;
-      currentRoom = roomInput.value.trim();
-      incomingCall.style.display = "block";
-    });
-
-    acceptBtn.onclick = async () => {
-      incomingCall.style.display = "none";
-      await getMedia();
-      socket.emit("rejoindre-appel", currentRoom);
-      socket.emit("accepter-appel", { roomId: currentRoom, from: fromSocket });
-      startPeer(true);
-    };
-
-    declineBtn.onclick = () => {
-      incomingCall.style.display = "none";
-      socket.emit("refuser-appel", { roomId: currentRoom, from: fromSocket });
-    };
-
-    socket.on("appel-accepte", async (to) => {
-      startPeer(false, to);
-    });
-
-    socket.on("appel-refuse", () => {
-      alert("L'appel a été refusé ❌");
-    });
-
-    async function getMedia() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localVideo.srcObject = localStream;
-    }
-
-    function startPeer(isReceiver, remoteId = "") {
-      peer = new RTCPeerConnection();
-      peer.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("candidate", { to: remoteId, candidate: e.candidate });
-        }
-      };
-      peer.ontrack = (e) => {
-        remoteVideo.srcObject = e.streams[0];
-      };
-      localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
-
-      if (isReceiver) return;
-
-      peer.createOffer().then((offer) => {
-        peer.setLocalDescription(offer);
-        socket.emit("offer", { to: remoteId, offer });
-      });
-    }
-
-    socket.on("offer", ({ offer, from }) => {
-      peer = new RTCPeerConnection();
-      peer.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("candidate", { to: from, candidate: e.candidate });
-        }
-      };
-      peer.ontrack = (e) => {
-        remoteVideo.srcObject = e.streams[0];
-      };
-      localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
-
-      peer.setRemoteDescription(offer).then(() => {
-        return peer.createAnswer();
-      }).then((answer) => {
-        peer.setLocalDescription(answer);
-        socket.emit("answer", { to: from, answer });
-      });
-    });
-
-    socket.on("answer", ({ answer }) => {
-      peer.setRemoteDescription(answer);
-    });
-
-    socket.on("candidate", ({ candidate }) => {
-      peer.addIceCandidate(candidate);
-    });
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
