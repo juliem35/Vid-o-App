@@ -1,37 +1,47 @@
 
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const { v4: uuidv4 } = require('uuid');
-const path = require('path');
+// ... garder le code précédent
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+io.on("connection", (socket) => {
+  console.log(`Client connecté: ${socket.id}`);
 
-const PORT = process.env.PORT || 3000;
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-  res.redirect(`/room/${uuidv4()}`);
-});
-
-app.get('/room/:room', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-io.on('connection', socket => {
-  socket.on('join-room', (roomId, userId) => {
-    socket.join(roomId);
-    socket.to(roomId).emit('user-connected', userId);
-
-    socket.on('disconnect', () => {
-      socket.to(roomId).emit('user-disconnected', userId);
-    });
+  socket.on("register", (userId) => {
+    users.set(userId, socket.id);
+    socket.userId = userId;
+    console.log(`Utilisateur enregistré : ${userId}`);
   });
-});
 
-server.listen(PORT, () => {
-  console.log(`Serveur en ligne sur http://localhost:${PORT}`);
+  socket.on("call-user", ({ targetUserId, fromUserId, offer }) => {
+    const targetSocketId = users.get(targetUserId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("incoming-call", { fromUserId, offer });
+    }
+  });
+
+  socket.on("accept-call", ({ toUserId, answer }) => {
+    const callerSocketId = users.get(toUserId);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("call-accepted", { answer });
+    }
+  });
+
+  socket.on("reject-call", ({ toUserId }) => {
+    const callerSocketId = users.get(toUserId);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("call-rejected");
+    }
+  });
+
+  socket.on("ice-candidate", ({ targetUserId, candidate }) => {
+    const targetSocketId = users.get(targetUserId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("ice-candidate", { candidate });
+    }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.userId) {
+      users.delete(socket.userId);
+      console.log(`Utilisateur déconnecté : ${socket.userId}`);
+    }
+  });
 });

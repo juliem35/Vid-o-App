@@ -1,15 +1,30 @@
 body {
-  font-family: Arial;
-  background: #f4f4f4;
-  padding: 20px;
+  font-family: Arial, sans-serif;
+  margin: 2rem;
 }
-#chat-container {
-  max-width: 600px;
-  margin: auto;
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
+
+.popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #f3f3f3;
+  border: 1px solid #333;
+  padding: 1rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
-#messages div {
-  margin-bottom: 10px;
+
+#videos {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+#videos video {
+  width: 45%;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: black;
+  max-height: 360px;
+  object-fit: cover;
 }

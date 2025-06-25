@@ -3,21 +3,45 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Appel Vidéo</title>
-  <style>
-    body { margin: 0; background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-    video { width: 45%; margin: 10px; border-radius: 10px; }
-    #videos { display: flex; flex-wrap: wrap; justify-content: center; }
-  </style>
+  <title>Appel vidéo avec notification</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>Appel Vidéo en direct</h2>
-  <div id="videos">
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
+  <h1>Appel vidéo simple</h1>
+
+  <div>
+    <label>Ton ID utilisateur : <input type="text" id="userIdInput" /></label>
+    <button id="registerBtn">S'enregistrer</button>
   </div>
+
+  <div id="callSection" style="display:none;">
+    <label>ID utilisateur à appeler : <input type="text" id="targetUserIdInput" /></label>
+    <button id="callBtn">Appeler</button>
+  </div>
+
+  <div id="incomingCall" class="popup" style="display:none;">
+    <p id="incomingCallText"></p>
+    <button id="acceptCallBtn">Accepter</button>
+    <button id="rejectCallBtn">Refuser</button>
+  </div>
+
+  <div id="videos" style="display:none;">
+    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
-  <script src="script.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+
+  <div id="incomingCall" class="popup" style="display:none;">
+    <p id="incomingCallText"></p>
+    <button id="acceptCallBtn">Accepter</button>
+    <button id="rejectCallBtn">Refuser</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
