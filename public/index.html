@@ -1,47 +1,152 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Appel vidéo avec notification</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appel Vidéo WebRTC</title>
+  <style>
+    body { font-family: Arial; text-align: center; margin: 20px; }
+    video { width: 45%; margin: 10px; background: #000; }
+    #incomingCall { display: none; padding: 10px; background: #eee; margin: 15px auto; border: 1px solid #ccc; width: 300px; }
+    #startCall { margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <h1>Appel vidéo simple</h1>
+  <h1>Appel Vidéo WebRTC</h1>
+  <div>
+    <input type="text" id="roomInput" placeholder="Nom de la salle" />
+    <button id="startCall">📞 Démarrer l'appel</button>
+  </div>
+
+  <div id="incomingCall">
+    <p>📲 Appel entrant...</p>
+    <button id="acceptCall">✅ Accepter</button>
+    <button id="declineCall">❌ Refuser</button>
+  </div>
 
   <div>
-    <label>Ton ID utilisateur : <input type="text" id="userIdInput" /></label>
-    <button id="registerBtn">S'enregistrer</button>
-  </div>
-
-  <div id="callSection" style="display:none;">
-    <label>ID utilisateur à appeler : <input type="text" id="targetUserIdInput" /></label>
-    <button id="callBtn">Appeler</button>
-  </div>
-
-  <div id="incomingCall" class="popup" style="display:none;">
-    <p id="incomingCallText"></p>
-    <button id="acceptCallBtn">Accepter</button>
-    <button id="rejectCallBtn">Refuser</button>
-  </div>
-
-  <div id="videos" style="display:none;">
-    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="localVideo" autoplay playsinline muted></video>
     <video id="remoteVideo" autoplay playsinline></video>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="main.js"></script>
-</body>
-</html>
+  <script>
+    const socket = io();
+    let localStream, peer;
+    let currentRoom = "";
+    let fromSocket = "";
 
-  <div id="incomingCall" class="popup" style="display:none;">
-    <p id="incomingCallText"></p>
-    <button id="acceptCallBtn">Accepter</button>
-    <button id="rejectCallBtn">Refuser</button>
-  </div>
+    const configuration = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        {
+          urls: "turn:global.relay.ice4.dev:443",
+          username: "free",
+          credential: "free"
+        }
+      ]
+    };
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="main.js"></script>
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const startBtn = document.getElementById("startCall");
+    const roomInput = document.getElementById("roomInput");
+    const incomingCall = document.getElementById("incomingCall");
+    const acceptBtn = document.getElementById("acceptCall");
+    const declineBtn = document.getElementById("declineCall");
+
+    startBtn.onclick = async () => {
+      currentRoom = roomInput.value.trim();
+      if (!currentRoom) return alert("Entrez un nom de salle");
+      await getMedia();
+      socket.emit("demarrer-appel", currentRoom);
+    };
+
+    socket.on("appel-recu", (from) => {
+      fromSocket = from;
+      currentRoom = roomInput.value.trim();
+      incomingCall.style.display = "block";
+    });
+
+    acceptBtn.onclick = async () => {
+      incomingCall.style.display = "none";
+      await getMedia();
+      socket.emit("rejoindre-appel", currentRoom);
+      socket.emit("accepter-appel", { roomId: currentRoom, from: fromSocket });
+      startPeer(true, fromSocket);
+    };
+
+    declineBtn.onclick = () => {
+      incomingCall.style.display = "none";
+      socket.emit("refuser-appel", { roomId: currentRoom, from: fromSocket });
+    };
+
+    socket.on("appel-accepte", (to) => {
+      startPeer(false, to);
+    });
+
+    socket.on("appel-refuse", () => {
+      alert("L'appel a été refusé ❌");
+    });
+
+    async function getMedia() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
+    }
+
+    function startPeer(isReceiver, remoteId = "") {
+      peer = new RTCPeerConnection(configuration);
+
+      peer.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit("candidate", { to: remoteId, candidate: e.candidate });
+        }
+      };
+
+      peer.ontrack = (e) => {
+        remoteVideo.srcObject = e.streams[0];
+      };
+
+      localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
+
+      if (isReceiver) return;
+
+      peer.createOffer().then((offer) => {
+        peer.setLocalDescription(offer);
+        socket.emit("offer", { to: remoteId, offer });
+      });
+    }
+
+    socket.on("offer", ({ offer, from }) => {
+      peer = new RTCPeerConnection(configuration);
+
+      peer.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit("candidate", { to: from, candidate: e.candidate });
+        }
+      };
+
+      peer.ontrack = (e) => {
+        remoteVideo.srcObject = e.streams[0];
+      };
+
+      localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
+
+      peer.setRemoteDescription(offer).then(() => {
+        return peer.createAnswer();
+      }).then((answer) => {
+        peer.setLocalDescription(answer);
+        socket.emit("answer", { to: from, answer });
+      });
+    });
+
+    socket.on("answer", ({ answer }) => {
+      peer.setRemoteDescription(answer);
+    });
+
+    socket.on("candidate", ({ candidate }) => {
+      peer.addIceCandidate(candidate);
+    });
+  </script>
 </body>
 </html>

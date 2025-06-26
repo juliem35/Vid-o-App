@@ -1,7 +1,8 @@
-{
+
+ {
   "name": "video-call-app",
   "version": "1.0.0",
-  "description": "Système d'appel vidéo avec WebRTC et Socket.io",
+  "description": "Appel vidéo multi-utilisateurs avec salles",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -13,3 +14,5 @@
     "uuid": "^9.0.0"
   }
 }
+
+

@@ -1,11 +1,16 @@
+
 const socket = io();
 
 let myUserId = null;
 let currentCaller = null;
+let roomId = null;
 
 const userIdInput = document.getElementById("userIdInput");
-const registerBtn = document.getElementById("registerBtn");
+const roomIdInput = document.getElementById("roomIdInput");
+const joinRoomBtn = document.getElementById("joinRoomBtn");
+
 const callSection = document.getElementById("callSection");
+const roomNameSpan = document.getElementById("roomName");
 const targetUserIdInput = document.getElementById("targetUserIdInput");
 const callBtn = document.getElementById("callBtn");
 
@@ -20,9 +25,7 @@ const remoteVideo = document.getElementById("remoteVideo");
 
 let peerConnection = null;
 const configuration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-  ],
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
 
 let localStream = null;
@@ -37,36 +40,53 @@ async function startLocalStream() {
   }
 }
 
-registerBtn.onclick = async () => {
-  const userId = userIdInput.value.trim();
-  if (!userId) return alert("Entre ton ID utilisateur");
-  myUserId = userId;
-  socket.emit("register", userId);
-  registerBtn.disabled = true;
+joinRoomBtn.onclick = async () => {
+  myUserId = userIdInput.value.trim();
+  roomId = roomIdInput.value.trim();
+  if (!myUserId || !roomId) return alert("Entre un ID utilisateur et un nom de salle.");
+
+  socket.emit("join-room", roomId, myUserId);
+
   userIdInput.disabled = true;
+  roomIdInput.disabled = true;
+  joinRoomBtn.disabled = true;
+
   callSection.style.display = "block";
+  roomNameSpan.textContent = roomId;
 
   await startLocalStream();
-  console.log("Enregistré avec ID :", userId);
 };
 
-async function createPeerConnection(targetUserId) {
-  peerConnection = new RTCPeerConnection(configuration);
-
-  localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
-
-  peerConnection.ontrack = (event) => {
-    remoteVideo.srcObject = event.streams[0];
+function startPeer(isReceiver, remoteId = "") {
+  const configuration = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   };
 
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      socket.emit("ice-candidate", {
-        targetUserId,
-        candidate: event.candidate,
-      });
+  peer = new RTCPeerConnection(configuration);
+
+  peer.onicecandidate = (e) => {
+    if (e.candidate) {
+      console.log("Envoi candidat ICE:", e.candidate);
+      socket.emit("candidate", { to: remoteId, candidate: e.candidate });
     }
   };
+
+  peer.ontrack = (e) => {
+    console.log("Flux distant reçu");
+    remoteVideo.srcObject = e.streams[0];
+  };
+
+  localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
+
+  if (isReceiver) return;
+
+  peer.createOffer()
+    .then((offer) => peer.setLocalDescription(offer))
+    .then(() => {
+      console.log("Envoi de l'offre");
+      socket.emit("offer", { to: remoteId, offer: peer.localDescription });
+    })
+    .catch(e => console.error(e));
 }
 
 callBtn.onclick = async () => {
@@ -88,12 +108,13 @@ callBtn.onclick = async () => {
   alert("Appel lancé, en attente de réponse...");
 };
 
-socket.on("incoming-call", async ({ fromUserId, offer }) => {
-  currentCaller = fromUserId;
-  incomingCallText.textContent = `📞 Appel entrant de ${fromUserId}`;
+socket.on("appel-recu", ({ from, username: callerName }) => {
+  fromSocket = from;
+  currentRoom = roomInput.value.trim();
   incomingCall.style.display = "block";
-  incomingCall.offer = offer;
+  incomingCall.querySelector("p").textContent = `📲 Appel entrant de ${callerName}...`;
 });
+
 
 acceptCallBtn.onclick = async () => {
   if (!currentCaller || !incomingCall.offer) return;
