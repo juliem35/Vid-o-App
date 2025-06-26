@@ -1,17 +1,74 @@
-
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background-color: #f4f4f4;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 20px;
+  background-color: #f0f2f5;
 }
-.videos {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
+
+h1 {
+  color: #333;
 }
+
+.controls {
+  margin-bottom: 20px;
+}
+
+input {
+  padding: 8px;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 200px;
+}
+
+button {
+  padding: 8px 16px;
+  margin: 5px;
+  border: none;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
 video {
-    width: 45%;
-    margin: 0 10px;
-    border: 2px solid #333;
-    border-radius: 10px;
+  width: 45%;
+  margin: 10px;
+  border-radius: 10px;
+  background: #000;
+  border: 2px solid #333;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+#incomingCall {
+  display: none;
+  padding: 15px;
+  background: #fff;
+  margin: 15px auto;
+  border: 1px solid #ccc;
+  width: 300px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #f3f3f3;
+  border: 1px solid #333;
+  padding: 1rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.videos {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
 }
